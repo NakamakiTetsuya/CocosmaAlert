@@ -14,17 +14,17 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 
 public class CocosmaAlert implements RequestHandler<String, String> {
+	private final String BASE_URL = "http://matsumoto.fudousan.co.jp";
+	private final String SEARCH_URL = "/sell/list/3/";
+	private final String LINE_SEP = System.getProperty("line.separator");
+	private final String SNS_ARN = System.getenv("COCOSMA_ALERT_ARN");
+	private final String REGION = "us-west-2";
+	private final String SUBJECT = "ココスマ更新情報";
+	private AmazonSNSClientBuilder snsClient = AmazonSNSClientBuilder.standard();
+	private Document document = null;
 
 	@Override
 	public String handleRequest(String input, Context context) {
-		final String BASE_URL = "http://matsumoto.fudousan.co.jp";
-		final String SEARCH_URL = "/sell/list/3/";
-		final String LINE_SEP = System.getProperty("line.separator");
-		final String SNS_ARN = System.getenv("COCOSMA_ALERT_ARN");
-		final String REGION = "us-west-2";
-		final String SUBJECT = "ココスマ更新情報";
-		Document document = null;
-
 		try {
 			document = Jsoup.connect(BASE_URL + SEARCH_URL).data("list_type", "detail").data("page_disp", "100")
 					.data("sort_type", "kakaku_amt").data("sort_vector", "asc").data("kakaku_l", "1000")
@@ -56,9 +56,8 @@ public class CocosmaAlert implements RequestHandler<String, String> {
 			}
 		});
 
-		return sb.length() <= 1 ? null
-				: AmazonSNSClientBuilder.standard().withRegion(REGION).build().publish(SNS_ARN, sb.toString(), SUBJECT)
-						.getMessageId();
+		return sb.length() <= 0 ? null
+				: snsClient.withRegion(REGION).build().publish(SNS_ARN, sb.toString(), SUBJECT).getMessageId();
 	}
 
 }
